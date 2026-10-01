@@ -12,14 +12,25 @@ import { uploadFile } from "@/lib/uploadFile"
 import { API_BASE_URL } from "@/lib/api"
 import { Button, Input } from "@base-ui/react"
 import axios from "axios"
-import { Plus, Upload } from "lucide-react"
-import { useState } from "react"
+import { Plus, Upload, X } from "lucide-react"
+import { useEffect, useState } from "react"
 
 export const Foodbutton = ({ categoryId, categoryName, foodfunction }: { categoryId: string; categoryName: string; foodfunction: () => void | Promise<void> }) => {
     const [foodname, setFoodname] = useState("");
     const [price, setPrice] = useState<number | string>("");
     const [ingredients, setIngredients] = useState("");
     const [file, setFile] = useState<File>();
+    const [previewUrl, setPreviewUrl] = useState("");
+
+    useEffect(() => {
+        if (!file) {
+            setPreviewUrl("");
+            return;
+        }
+        const url = URL.createObjectURL(file);
+        setPreviewUrl(url);
+        return () => URL.revokeObjectURL(url);
+    }, [file]);
 
     const handledFoodname = (e: React.ChangeEvent<HTMLInputElement>) => {
         setFoodname(e.target.value);
@@ -29,7 +40,7 @@ export const Foodbutton = ({ categoryId, categoryName, foodfunction }: { categor
         setPrice(e.target.value);
     }
 
-    const handledIngredients = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handledIngredients = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         setIngredients(e.target.value);
     }
 
@@ -73,31 +84,42 @@ export const Foodbutton = ({ categoryId, categoryName, foodfunction }: { categor
                     <DialogHeader>
                         <DialogTitle>Add new Dish to {categoryName}</DialogTitle>
 
-                        <div className="flex flex-col gap-3 mt-4">
-                            <div>
-                                <p className="text-sm font-medium">Food name</p>
-                                <Input value={foodname} onChange={handledFoodname} type="text" className="border w-full p-2 rounded" />
-                            </div>
-                            <div>
-                                <p className="text-sm font-medium">Food price</p>
-                                <Input value={price} onChange={handledprice} type="number" className="border w-full p-2 rounded" />
+                        <div className="mt-4 flex flex-col gap-3">
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <p className="text-sm font-medium">Food name</p>
+                                    <Input value={foodname} onChange={handledFoodname} type="text" className="border w-full p-2 rounded" />
+                                </div>
+                                <div>
+                                    <p className="text-sm font-medium">Food price</p>
+                                    <Input value={price} onChange={handledprice} type="number" className="border w-full p-2 rounded" />
+                                </div>
                             </div>
                             <div>
                                 <p className="text-sm font-medium">Ingredients</p>
-                                <Input value={ingredients} onChange={handledIngredients} type="text" className="border w-full p-2 rounded" />
+                                <textarea value={ingredients} onChange={handledIngredients} rows={3} className="w-full resize-none rounded border p-2 text-sm outline-none focus:ring-2 focus:ring-red-500" />
                             </div>
                             <div>
-                                <p className="text-sm font-medium">Image</p>
-                                <label className="mt-1 flex cursor-pointer items-center gap-2 rounded-md border border-dashed p-3 text-sm text-gray-600">
-                                    <Upload size={16} />
-                                    <span>{file?.name || "Choose a food image"}</span>
-                                    <Input onChange={handleFile} type="file" accept="image/*" className="sr-only" />
-                                </label>
+                                <p className="text-sm font-medium">Food image</p>
+                                {previewUrl ? (
+                                    <div className="relative mt-1 h-40 w-full overflow-hidden rounded-md border">
+                                        <img src={previewUrl} alt="" className="h-full w-full object-cover" />
+                                        <button type="button" onClick={() => setFile(undefined)} aria-label="Remove image" className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-white text-[#252529] shadow">
+                                            <X size={14} />
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <label className="mt-1 flex cursor-pointer items-center gap-2 rounded-md border border-dashed p-3 text-sm text-gray-600">
+                                        <Upload size={16} />
+                                        <span>Choose a food image</span>
+                                        <Input onChange={handleFile} type="file" accept="image/*" className="sr-only" />
+                                    </label>
+                                )}
                             </div>
 
                             <div className="mt-4 flex justify-end">
-                                <DialogClose render={<Button onClick={buttonfood} className="rounded-md bg-[#ff494d] px-4 py-2 text-sm font-medium text-white" />}>
-                                    Add dish
+                                <DialogClose render={<Button onClick={buttonfood} className="rounded-md bg-[#19191b] px-4 py-2 text-sm font-medium text-white" />}>
+                                    Add Dish
                                 </DialogClose>
                             </div>
                         </div>

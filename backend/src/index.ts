@@ -4,6 +4,7 @@ import foodCategoryRoute from './routes/food-category.routes.js';
 import { cors } from 'hono/cors';
 import foodRoute from './routes/food.routes.js';
 import userRoute from './routes/user.routes.js';
+import orderRoute from './routes/order.routes.js';
 import { serve } from '@hono/node-server';
 
 const app = new Hono();
@@ -19,6 +20,7 @@ app.get('/', (c) => c.json({ message: 'Food delivery API is running' }));
 app.route('/category', foodCategoryRoute);
 app.route('/food', foodRoute);
 app.route('/user', userRoute);
+app.route('/order', orderRoute);
 
 async function startServer() {
     try {

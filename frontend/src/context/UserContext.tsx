@@ -13,6 +13,7 @@ export type Usertype = {
 
 type UserContextType = {
     user: Usertype | undefined;
+    loading: boolean;
     signIn: (email: string, password: string) => Promise<void>;
     signOut: () => void;
 }
@@ -21,6 +22,7 @@ export const UserContext = createContext<UserContextType | undefined>(undefined)
 
 export const UserProvider = ({ children }: { children: ReactNode }) => {
     const [user, setUser] = useState<Usertype>();
+    const [loading, setLoading] = useState(true);
     const router = useRouter();
 
     const signIn = async (email: string, password: string) => {
@@ -40,8 +42,8 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
                     localStorage.setItem("token", token);
                 }
 
-                // 2. Нэвтэрсний дараа Нүүр хуудас руу шилжих
-                router.push("/");
+                // 2. Нэвтэрсний дараа эрхээс хамааран чиглүүлэх
+                router.push(user.role === "ADMIN" ? "/admin" : "/");
             }
         } catch (error: any) {
             console.error("Нэвтрэхэд алдаа гарлаа:", error);
@@ -65,6 +67,8 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
             }
         } catch (error) {
             console.error("Localstorage-оос дата уншихад алдаа гарлаа:", error);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -73,7 +77,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     }, []);
 
     return (
-        <UserContext.Provider value={{ user, signIn, signOut }}>
+        <UserContext.Provider value={{ user, loading, signIn, signOut }}>
             {children}
         </UserContext.Provider>
     );

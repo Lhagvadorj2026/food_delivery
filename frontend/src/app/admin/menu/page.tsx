@@ -5,7 +5,7 @@ import { Foodbutton } from "@/components/ui/admin/foodbutton";
 import { UserContext } from "@/context/UserContext";
 import { API_BASE_URL } from "@/lib/api";
 import axios from "axios";
-import { LayoutGrid, ShoppingBag, Utensils, UserRound } from "lucide-react";
+import { LayoutGrid, Truck, Utensils, UserRound } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useContext, useEffect, useState } from "react";
@@ -79,7 +79,7 @@ const Menu = () => {
                         <span className="max-sm:hidden">Food menu</span>
                     </Link>
                     <Link href="/admin/orders" className="flex h-9 items-center gap-2 rounded-full px-3 text-[11px] font-medium text-[#333338] hover:bg-[#f4f4f5] max-sm:justify-center max-sm:px-0">
-                        <ShoppingBag size={15} />
+                        <Truck size={15} />
                         <span className="max-sm:hidden">Orders</span>
                     </Link>
                 </nav>
@@ -100,7 +100,7 @@ const Menu = () => {
                             onClick={() => setActiveCategory("all")}
                             className={`flex h-[27px] items-center gap-2 rounded-full border px-3 text-[10px] transition ${activeCategory === "all" ? "border-[#ff4b50]" : "border-[#e7e7e9] hover:border-[#ff4b50]"}`}
                         >
-                            All Dishes <span className="rounded-full bg-[#19191b] px-[7px] py-[2px] text-[9px] font-semibold text-white">{foodmenu.length}</span>
+                            All Dishes <span className="rounded-full bg-[#f0f0f2] px-[7px] py-[2px] text-[9px] font-semibold text-[#171719]">{foodmenu.length}</span>
                         </button>
                         {category.map((item) => (
                             <button
@@ -109,7 +109,7 @@ const Menu = () => {
                                 onClick={() => setActiveCategory(item._id)}
                                 className={`flex h-[27px] items-center gap-2 rounded-full border px-3 text-[10px] transition ${activeCategory === item._id ? "border-[#ff4b50]" : "border-[#e7e7e9] hover:border-[#ff4b50]"}`}
                             >
-                                {item.categoryName}<span className="rounded-full bg-[#19191b] px-[7px] py-[2px] text-[9px] font-semibold text-white">{getFoods(item._id).length}</span>
+                                {item.categoryName}<span className="rounded-full bg-[#f0f0f2] px-[7px] py-[2px] text-[9px] font-semibold text-[#171719]">{getFoods(item._id).length}</span>
                             </button>
                         ))}
                         <Categoryadd fetchdata={fetchData} />

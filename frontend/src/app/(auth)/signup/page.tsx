@@ -27,6 +27,7 @@ export default function SignupPage() {
     const router = useRouter()
     const [step, setStep] = useState(1)
     const [showPassword, setShowPassword] = useState(false)
+    const [submitError, setSubmitError] = useState("")
 
     const { register, handleSubmit, trigger, formState: { errors, isSubmitting } } = useForm<SignupFormValues>({
         resolver: zodResolver(signupSchema),
@@ -34,7 +35,8 @@ export default function SignupPage() {
 
     const onSubmit = async (data: SignupFormValues) => {
         try {
-            const res = await fetch(`${API_BASE_URL}/user/signup`, {
+            setSubmitError("")
+            const signupResponse = await fetch(`${API_BASE_URL}/user/signup`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -45,15 +47,32 @@ export default function SignupPage() {
                 }),
             })
 
-            if (res.ok) {
-                router.push("/signin")
-            } else {
-                const errorData = await res.json()
-                alert(errorData.message || "Бүртгэл амжилтгүй боллоо")
+            const signupResult: { message?: string; verificationToken?: string } = await signupResponse.json()
+            if (!signupResponse.ok) {
+                throw new Error(signupResult.message || "Бүртгэл амжилтгүй боллоо")
             }
+
+            if (!signupResult.verificationToken) {
+                throw new Error("Баталгаажуулах token серверээс ирсэнгүй")
+            }
+
+            const verificationResponse = await fetch(`${API_BASE_URL}/user/verify-email`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ token: signupResult.verificationToken }),
+            })
+
+            const verificationResult: { message?: string } = await verificationResponse.json()
+            if (!verificationResponse.ok) {
+                throw new Error(verificationResult.message || "Бүртгэл баталгаажсангүй")
+            }
+
+            router.push("/signin")
         } catch (error) {
             console.error("Signup error:", error)
-            alert("Сервертэй холбогдоход алдаа гарлаа")
+            setSubmitError(error instanceof Error ? error.message : "Сервертэй холбогдоход алдаа гарлаа")
         }
     }
 
@@ -122,6 +141,8 @@ export default function SignupPage() {
                             </div>
                         )}
                     </form>
+
+                    {submitError && <p role="alert" className="mt-3 text-[11px] text-[#e34449]">{submitError}</p>}
 
                     <p className="mt-5 text-center text-[10px] text-[#77777d]">Already have an account? <Link href="/signin" className="font-semibold text-[#29292d] underline underline-offset-2">Log in</Link></p>
                 </div>

@@ -1,9 +1,11 @@
 "use client";
 
-import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, LayoutGrid, ShoppingBag, UserRound } from "lucide-react";
+import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, LayoutGrid, Truck, UserRound } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import axios from "axios";
+import { API_BASE_URL } from "@/lib/api";
 
 type DeliveryStatus = "Pending" | "Delivered" | "Cancelled";
 
@@ -18,27 +20,28 @@ interface Order {
     status: DeliveryStatus;
 }
 
+interface OrderResponse {
+    _id: string;
+    customer: string;
+    email: string;
+    items: { foodname: string; quantity: number; image: string }[];
+    createdAt: string;
+    total: number;
+    address: string;
+    status: DeliveryStatus;
+}
+
 const statuses: DeliveryStatus[] = ["Pending", "Delivered", "Cancelled"];
 
-const allOrders: Order[] = Array.from({ length: 32 }, (_, index) => {
-    const day = 13 + (index % 32);
-    const date = new Date(2023, 5, day);
-    const dateString = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-    const status: DeliveryStatus = index < 3 ? "Pending" : index < 7 ? "Delivered" : "Cancelled";
-
-    return {
-        id: `order-${index + 1}`,
-        customer: index === 0 ? "Aingaa" : "NomNom customer",
-        email: index === 0 ? "Test@gmail.com" : `customer${index + 1}@gmail.com`,
-        items: [
-            { name: "Sunshine Stackers", quantity: 1, image: "/image/salad.png" },
-            { name: "Garden Fresh Bowl", quantity: 1, image: "/image/salad.png" },
-        ],
-        date: dateString,
-        total: index % 2 === 0 ? 26.97 : 20.97,
-        address: "12-р хороо, СБД, Нэгдсэн үндэстний гудамж, Улаанбаатар",
-        status,
-    };
+const mapOrder = (order: OrderResponse): Order => ({
+    id: order._id,
+    customer: order.customer,
+    email: order.email,
+    items: (order.items || []).map((item) => ({ name: item.foodname, quantity: item.quantity, image: item.image })),
+    date: order.createdAt ? order.createdAt.slice(0, 10) : "",
+    total: order.total,
+    address: order.address,
+    status: order.status,
 });
 
 const statusStyles: Record<DeliveryStatus, string> = {
@@ -50,17 +53,30 @@ const statusStyles: Record<DeliveryStatus, string> = {
 const formatMoney = (amount: number) => `$${amount.toFixed(2)}`;
 
 export default function OrdersPage() {
-    const [orders, setOrders] = useState(allOrders);
+    const [orders, setOrders] = useState<Order[]>([]);
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const [bulkStatus, setBulkStatus] = useState<DeliveryStatus | "">("");
     const [page, setPage] = useState(1);
-    const [fromDate, setFromDate] = useState("2023-06-13");
-    const [toDate, setToDate] = useState("2023-07-14");
+    const [fromDate, setFromDate] = useState("");
+    const [toDate, setToDate] = useState("");
     const pageSize = 12;
 
+    const fetchOrders = async () => {
+        try {
+            const response = await axios.get(`${API_BASE_URL}/order`);
+            setOrders((response.data.orders || []).map(mapOrder));
+        } catch (error) {
+            console.error("Захиалгуудыг татахад алдаа гарлаа:", error);
+        }
+    };
+
+    useEffect(() => {
+        void fetchOrders();
+    }, []);
+
     const filteredOrders = useMemo(
-        () => orders.filter((order) => order.date >= fromDate && order.date <= toDate),
+        () => orders.filter((order) => (!fromDate || order.date >= fromDate) && (!toDate || order.date <= toDate)),
         [orders, fromDate, toDate],
     );
     const pageCount = Math.max(1, Math.ceil(filteredOrders.length / pageSize));
@@ -77,13 +93,24 @@ export default function OrdersPage() {
             : [...new Set([...current, ...pageOrders.map((order) => order.id)])]);
     };
 
-    const updateStatus = (ids: string[], status: DeliveryStatus) => {
+    const updateStatus = async (ids: string[], status: DeliveryStatus) => {
+        const previousOrders = orders;
         setOrders((current) => current.map((order) => ids.includes(order.id) ? { ...order, status } : order));
+        try {
+            if (ids.length === 1) {
+                await axios.patch(`${API_BASE_URL}/order/${ids[0]}/status`, { status });
+            } else {
+                await axios.patch(`${API_BASE_URL}/order/bulk-status`, { ids, status });
+            }
+        } catch (error) {
+            console.error("Төлөв шинэчлэхэд алдаа гарлаа:", error);
+            setOrders(previousOrders);
+        }
     };
 
     const applyBulkStatus = () => {
         if (!bulkStatus || selectedIds.length === 0) return;
-        updateStatus(selectedIds, bulkStatus);
+        void updateStatus(selectedIds, bulkStatus);
         setSelectedIds([]);
         setBulkStatus("");
     };
@@ -92,6 +119,7 @@ export default function OrdersPage() {
         setter(date);
         setPage(1);
     };
+
 
     return (
         <main className="flex min-h-screen bg-[#f4f4f5] text-[#252529]">
@@ -102,7 +130,7 @@ export default function OrdersPage() {
                 </Link>
                 <nav className="space-y-2" aria-label="Admin navigation">
                     <Link href="/admin/menu" className="flex h-9 items-center gap-2 rounded-full px-3 text-[11px] font-medium text-[#333338] hover:bg-[#f4f4f5] max-sm:justify-center max-sm:px-0"><LayoutGrid size={15} /><span className="max-sm:hidden">Food menu</span></Link>
-                    <Link href="/admin/orders" aria-current="page" className="flex h-9 items-center gap-2 rounded-full bg-[#19191b] px-3 text-[11px] font-medium text-white max-sm:justify-center max-sm:px-0"><ShoppingBag size={15} /><span className="max-sm:hidden">Orders</span></Link>
+                    <Link href="/admin/orders" aria-current="page" className="flex h-9 items-center gap-2 rounded-full bg-[#19191b] px-3 text-[11px] font-medium text-white max-sm:justify-center max-sm:px-0"><Truck size={15} /><span className="max-sm:hidden">Orders</span></Link>
                 </nav>
             </aside>
 
@@ -115,7 +143,7 @@ export default function OrdersPage() {
                     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e8e8eb] px-3 py-3">
                         <div>
                             <h1 className="text-[15px] font-bold">Orders</h1>
-                            <p className="mt-0.5 text-[10px] text-[#88888f]">{filteredOrders.length} items <span className="ml-2 text-[#b06438]">Demo data · order API not connected</span></p>
+                            <p className="mt-0.5 text-[10px] text-[#88888f]">{filteredOrders.length} items</p>
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
                             <label className="flex h-8 items-center gap-1.5 rounded-full border border-[#e7e7ea] px-2">
@@ -156,7 +184,7 @@ export default function OrdersPage() {
                                             <button type="button" aria-expanded={expandedId === order.id} onClick={() => setExpandedId((current) => current === order.id ? null : order.id)} className="flex items-center gap-2 text-[#686870]">
                                                 {order.items.length} foods <ChevronDown size={12} className={`transition-transform ${expandedId === order.id ? "rotate-180" : ""}`} />
                                             </button>
-                                            {expandedId === order.id && <div className="absolute z-10 mt-2 w-[190px] rounded-md border border-[#e7e7e9] bg-white p-2 shadow-lg">{order.items.map((food) => <div key={food.name} className="flex items-center gap-2 py-1"><Image src={food.image} alt="" width={24} height={24} className="h-6 w-6 rounded object-cover" /><span className="min-w-0 flex-1 truncate text-[9px]">{food.name}</span><span className="text-[9px] text-[#88888f]">x {food.quantity}</span></div>)}</div>}
+                                            {expandedId === order.id && <div className="absolute z-10 mt-2 w-[190px] rounded-md border border-[#e7e7e9] bg-white p-2 shadow-lg">{order.items.map((food) => <div key={food.name} className="flex items-center gap-2 py-1"><Image src={food.image || "/image/salad.png"} alt="" width={24} height={24} className="h-6 w-6 rounded object-cover" unoptimized /><span className="min-w-0 flex-1 truncate text-[9px]">{food.name}</span><span className="text-[9px] text-[#88888f]">x {food.quantity}</span></div>)}</div>}
                                         </td>
                                         <td className="py-2.5 text-[#686870]">{order.date.replaceAll("-", "/")}</td>
                                         <td className="py-2.5 text-[#686870]">{formatMoney(order.total)}</td>
